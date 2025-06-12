@@ -1,30 +1,161 @@
 ---
 title: "What is your blogpost title? Add it here??"
 subtitle: "Assignment 4 ETC5512"
-author: "Who are you?? Add your name here"
+author: "Trisha Aurielle Andrea"
 format: html
 editor: visual
 ---
 
-
-::: {.panel-tabset}
-
+::: panel-tabset
 <!-- Task 1 Tab: Data and Documenting -->
+
 ## Data and Documenting
 
-### What's in this section
+```{r, echo=FALSE}
+library(readr)
+library(tidyverse)
+library(caret)
+library(pROC)
+library(corrplot)
+library(dplyr)
+library(ggplot2)
+library(e1071)
+library(ROSE)
+```
 
-Here is where you should provide the more comprehensive details about your data and your processing steps.
+#### Topic 
 
-These are the data details that an "average" blog post reader is not concerned with (Task 1). 
+#### Description
 
-### Remember
+#### Dataset link
 
-Please mention any additional files that you want the markers to review, eg. read me, meta data etc.
+#### Download Process
+
+#### Data Usage
+
+```{r, warning=FALSE}
+heart_data1 <- read.csv("data/heart_2020_cleaned.csv")
+heart_data2 <- read.csv("data/heart_disease_health_indicators_BRFSS2015.csv")
+head(heart_data1)
+head(heart_data2)
+```
+```{r}
+str(heart_data1)
+summary(heart_data1)
+```
+
+```{r}
+str(heart_data2)
+summary(heart_data2)
+```
+```{r}
+# Rename columns for consistency
+heart_data2 <- heart_data2 %>% rename(
+  Smoking = Smoker,
+  Diabetic = Diabetes,
+  PhysicalActivity = PhysActivity,
+  PhysicalHealth = PhysHlth,
+  MentalHealth = MentHlth,
+  AlcoholDrinking = HvyAlcoholConsump,
+  HeartDisease = HeartDiseaseorAttack
+)
+
+heart_data2 <- heart_data2 %>%
+  mutate(
+    Diabetic = ifelse(Diabetic == 2, 1, Diabetic)
+  )
+```
+
+```{r}
+# Convert categorical columns to numerical
+heart_data1 <- heart_data1 %>%
+  mutate(
+    HeartDisease = ifelse(HeartDisease == "Yes", 1, 0),
+    Smoking = ifelse(Smoking == "Yes", 1, 0),
+    AlcoholDrinking = ifelse(AlcoholDrinking == "Yes", 1, 0),
+    Stroke = ifelse(Stroke == "Yes", 1, 0),
+    PhysicalActivity = ifelse(PhysicalActivity == "Yes", 1, 0),
+    Diabetic = ifelse(Diabetic == "Yes", 1, ifelse(Diabetic == "No", 0, NA)),
+    Sex = ifelse(Sex == "Male", 1, 0)
+  )
+
+```
+
+```{r}
+# Select common columns
+common_columns <- c("HeartDisease", "BMI", "Smoking", "AlcoholDrinking", "Stroke",
+                    "PhysicalHealth", "MentalHealth", "Sex", "Diabetic", "PhysicalActivity")
+
+heart_data1 <- heart_data1 %>% select(all_of(common_columns))
+heart_data2 <- heart_data2 %>% select(all_of(common_columns))
+```
+
+```{r}
+# Combine datasets
+combined_data <- bind_rows(heart_data1, heart_data2)
+```
+
+
+```{r, warning=FALSE}
+# Perform exploratory data analysis (EDA)
+correlation_matrix <- cor(combined_data, use = "complete.obs")
+corrplot(correlation_matrix, method = "ellipse", type = "upper",
+         tl.col = "black", tl.cex = 0.8,
+         addCoef.col = "black", number.cex = 0.7,
+         order = "hclust", addrect = 2)
+
+print(table(combined_data$HeartDisease))
+ggplot(combined_data, aes(x = as.factor(HeartDisease))) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "HeartDisease Distribution", x = "Heart Disease (0 = No, 1 = Yes)", y = "Count")
+
+# Boxplots for BMI, PhysicalHealth, and MentalHealth
+numerical_features <- c("BMI", "PhysicalHealth", "MentalHealth")
+
+for (feature in numerical_features) {
+  print(
+    ggplot(combined_data, aes_string(y = feature)) +
+      geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.shape = 16) +
+      labs(title = paste("Boxplot of", feature), y = feature) +
+      theme_minimal()
+  )
+}
+```
+```{r}
+# Convert target variable to a factor
+combined_data <- combined_data %>%
+  mutate(
+    HeartDisease = as.factor(HeartDisease),  
+    Smoking = as.factor(Smoking),
+    AlcoholDrinking = as.factor(AlcoholDrinking),
+    Stroke = as.factor(Stroke),
+    PhysicalActivity = as.factor(PhysicalActivity),
+    Sex = as.factor(Sex),
+    Diabetic = as.factor(Diabetic),
+    BMI = as.numeric(BMI),
+    PhysicalHealth = as.numeric(PhysicalHealth),
+    MentalHealth = as.numeric(MentalHealth)
+  )
+
+str(combined_data)
+```
+
+```{r}
+# Train-test split
+set.seed(123)
+train_index <- createDataPartition(combined_data$HeartDisease, p = 0.7, list = FALSE)
+train_data <- combined_data[train_index, ]
+test_data <- combined_data[-train_index, ]
+
+str(train_data)
+table(train_data$Diabetic)
+set.seed(123)
+```
+
 
 <!-- Task 2 Tab: Writing your blogpost -->
 
-## Blog post 
+## Blog post
 
 ### What's in this section
 
@@ -32,17 +163,19 @@ Here is where you should write your blogpost! (Task 2)
 
 ### Blogpost Structure
 
-There is no strict structure for you to follow. However, here is a skeleton structure you may find helpful. 
+There is no strict structure for you to follow. However, here is a skeleton structure you may find helpful.
 
-1. Title (is set at the top of this document)
-2. Motivation  
-3. Data  
-4. Analysis     
-5. Conclusions  
-6. References 
+1.  Title (is set at the top of this document)
+2.  Motivation\
+3.  Data\
+4.  Analysis\
+5.  Conclusions\
+6.  References
+
 
 
 <!-- Task 3 Tab: Behind the Scenes -  -->
+
 ## Behind the Scenes
 
 ### What's in this section
@@ -50,4 +183,4 @@ There is no strict structure for you to follow. However, here is a skeleton stru
 Here is where you should tell us about your reflection on your analysis (Task 3).
 
 Again, these are the details about **your** perspective and the gritty details behind the scenes of your analysis.
-
+:::
